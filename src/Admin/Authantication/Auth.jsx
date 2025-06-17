@@ -36,20 +36,33 @@ function Auth() {
   const checkServerStatus = async () => {
     const HOST = LOGIN_ROUTE.split("/api/auth")[0];
     const endpoints = [
-      { url: `${HOST}/api/auth/health`, label: "health" },
       { url: `${HOST}/api/status`, label: "status" },
+      { url: `${HOST}/api/auth/health`, label: "health" },
       { url: `${HOST}/`, label: "root" },
     ];
 
+    console.log("Starting server status check...");
+    setServerStatus("checking");
+
     for (const { url, label } of endpoints) {
       try {
+        console.log(`Checking ${label} endpoint: ${url}`);
+
         const response = await axios.get(url, {
-          timeout: 5000,
+          timeout: 10000,
           withCredentials: true,
           headers: {
-            "Cache-Control": "no-cache",
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            // Removed Cache-Control header that was causing CORS issues
           },
         });
+
+        console.log(
+          `${label} endpoint response:`,
+          response.status,
+          response.data
+        );
 
         if (response.data?.status === "online" || response.status === 200) {
           console.log(`Server status: online (via ${label} endpoint)`);
@@ -57,7 +70,11 @@ function Auth() {
           return;
         }
       } catch (error) {
-        console.warn(`Check failed for ${label} endpoint:`, error.message);
+        console.warn(`Check failed for ${label} endpoint:`, {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+        });
       }
     }
 
@@ -121,6 +138,7 @@ function Auth() {
       });
 
       if (error.code === "ERR_NETWORK") {
+        setServerStatus("offline");
         toast.error("Network error. Please check your internet connection.");
       } else if (error.code === "ECONNABORTED") {
         toast.error("Request timeout. Server might be slow.");

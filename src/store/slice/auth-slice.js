@@ -23,6 +23,7 @@ export const createAuthSlice = (set, get) => ({
         {},
         {
           withCredentials: true,
+          timeout: 10000,
         }
       );
 
@@ -48,18 +49,11 @@ export const createAuthSlice = (set, get) => ({
       try {
         const response = await axios.get(`${HOST}/api/auth/admin-profile`, {
           withCredentials: true,
-          timeout: 15000, // 15 seconds timeout
+          timeout: 15000,
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
-            Connection: "keep-alive",
-          },
-          // Enable axios retry
-          "axios-retry": {
-            retries: 3,
-            retryDelay: (retryCount) => {
-              return retryCount * 1000; // 1s, 2s, 3s intervals
-            },
+            // Removed Connection header as it's causing issues
           },
         });
 
@@ -73,15 +67,28 @@ export const createAuthSlice = (set, get) => ({
       } catch (error) {
         console.error(`Auth check attempt ${attempt} failed:`, error);
 
+        // If it's a 401 (unauthorized), don't retry
+        if (error.response?.status === 401) {
+          set({ userinfo: null, isLoading: false });
+          return false;
+        }
+
+        // If it's the last attempt, set loading to false and return false
         if (attempt === MAX_RETRIES) {
           set({ userinfo: null, isLoading: false });
           return false;
         }
 
-        // Exponential backoff
-        await new Promise((resolve) =>
-          setTimeout(resolve, BASE_DELAY * Math.pow(2, attempt - 1))
-        );
+        // Exponential backoff for network errors only
+        if (error.code === "ERR_NETWORK" || error.code === "ECONNABORTED") {
+          await new Promise((resolve) =>
+            setTimeout(resolve, BASE_DELAY * Math.pow(2, attempt - 1))
+          );
+        } else {
+          // For other errors, don't retry
+          set({ userinfo: null, isLoading: false });
+          return false;
+        }
       }
     }
   },
