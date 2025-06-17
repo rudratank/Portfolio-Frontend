@@ -34,55 +34,36 @@ function Auth() {
   }, []);
 
   const checkServerStatus = async () => {
-    try {
-      console.log("Checking server status...");
-      const HOST = LOGIN_ROUTE.split("/api/auth")[0];
+    const HOST = LOGIN_ROUTE.split("/api/auth")[0];
+    const endpoints = [
+      { url: `${HOST}/api/auth/health`, label: "health" },
+      { url: `${HOST}/api/status`, label: "status" },
+      { url: `${HOST}/`, label: "root" },
+    ];
 
-      // First try the health endpoint with simplified headers
-      const healthResponse = await axios.get(`${HOST}/api/auth/health`, {
-        timeout: 5000,
-        withCredentials: true,
-      });
-
-      if (healthResponse.data?.status === "online") {
-        console.log("Server status: online (via health endpoint)");
-        setServerStatus("online");
-        return;
-      }
-    } catch (healthError) {
-      console.log(
-        "Health endpoint check failed, trying fallback...",
-        healthError
-      );
-
-      // If health endpoint fails, try the global status endpoint
+    for (const { url, label } of endpoints) {
       try {
-        const HOST = LOGIN_ROUTE.split("/api/auth")[0];
-        const response = await axios.get(`${HOST}/api/status`, {
-          timeout: 3000,
+        const response = await axios.get(url, {
+          timeout: 5000,
           withCredentials: true,
+          headers: {
+            "Cache-Control": "no-cache",
+          },
         });
 
-        if (response.data?.status === "online") {
+        if (response.data?.status === "online" || response.status === 200) {
+          console.log(`Server status: online (via ${label} endpoint)`);
           setServerStatus("online");
-          console.log("Server status: online (via /api/status)");
           return;
         }
-      } catch (statusError) {
-        console.error("Status endpoint check failed:", statusError);
-
-        // Final fallback - try root endpoint
-        try {
-          await axios.get(`${HOST}/`, { timeout: 2000 });
-          setServerStatus("online");
-          console.log("Server status: online (via root endpoint)");
-        } catch (rootError) {
-          console.error("All server checks failed:", rootError);
-          setServerStatus("offline");
-          toast.error("Server appears to be offline. Please try again later.");
-        }
+      } catch (error) {
+        console.warn(`Check failed for ${label} endpoint:`, error.message);
       }
     }
+
+    console.error("All server checks failed. Backend appears to be offline.");
+    setServerStatus("offline");
+    toast.error("Server appears to be offline. Please try again later.");
   };
 
   const handleLogin = async (e) => {

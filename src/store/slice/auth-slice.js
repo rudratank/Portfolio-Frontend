@@ -41,45 +41,48 @@ export const createAuthSlice = (set, get) => ({
   },
 
   checkAuth: async () => {
-    try {
-      // console.log("Checking auth with:", `${HOST}/api/auth/admin-profile`);
+    const MAX_RETRIES = 3;
+    const BASE_DELAY = 1000;
 
-      const response = await axios.get(`${HOST}/api/auth/admin-profile`, {
-        withCredentials: true,
-        timeout: 10000,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      });
-
-      //console.log("Auth check response:", response.data);
-
-      // Check if response contains user data (not error message)
-      if (response.data && response.data.id && response.data.email) {
-        set({
-          userinfo: response.data,
-          isLoading: false,
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await axios.get(`${HOST}/api/auth/admin-profile`, {
+          withCredentials: true,
+          timeout: 15000, // 15 seconds timeout
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Connection: "keep-alive",
+          },
+          // Enable axios retry
+          "axios-retry": {
+            retries: 3,
+            retryDelay: (retryCount) => {
+              return retryCount * 1000; // 1s, 2s, 3s intervals
+            },
+          },
         });
-        return true;
+
+        if (response.data?.id && response.data?.email) {
+          set({ userinfo: response.data, isLoading: false });
+          return true;
+        }
+
+        set({ userinfo: null, isLoading: false });
+        return false;
+      } catch (error) {
+        console.error(`Auth check attempt ${attempt} failed:`, error);
+
+        if (attempt === MAX_RETRIES) {
+          set({ userinfo: null, isLoading: false });
+          return false;
+        }
+
+        // Exponential backoff
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_DELAY * Math.pow(2, attempt - 1))
+        );
       }
-
-      // If response doesn't have proper user data, treat as unauthenticated
-      //console.log("Invalid user data in response:", response.data);
-      set({
-        userinfo: null,
-        isLoading: false,
-      });
-      return false;
-    } catch (error) {
-      console.error("Auth check error:", error.response?.data || error.message);
-
-      // Don't treat errors as user info
-      set({
-        userinfo: null,
-        isLoading: false,
-      });
-      return false;
     }
   },
 });
