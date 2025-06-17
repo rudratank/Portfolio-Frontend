@@ -1,4 +1,4 @@
-export const HOST = "http://localhost:3002";
+export const HOST = "https://portfolio-backend-dy5g.onrender.com";
 export const LOGIN_ROUTE = `${HOST}/api/auth/admin-auth`;
 export const VERIFY_OTP = `${HOST}/api/auth/verify-otp`;
 export const LOGOUT_ROUTE = `${HOST}/api/auth/admin-logout`;
