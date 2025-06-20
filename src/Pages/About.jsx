@@ -155,28 +155,30 @@ function About() {
   const [error, setError] = useState(null);
 
   const downloadResume = async () => {
-    try {
-      const response = await fetch(FETCH_RESUME);
-      if (!response.ok) {
-        throw new Error(`Error fetching resume: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Resume.pdf";
-      document.body.appendChild(a);
-      a.click();
-
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error("Error downloading resume:", error);
-      setError("Failed to download resume. Please try again later.");
+  try {
+    const response = await fetch(FETCH_RESUME);
+    if (!response.ok) {
+      throw new Error(`Error fetching resume: ${response.statusText}`);
     }
-  };
+
+    const blob = await response.blob();
+    if (blob.type !== "application/pdf") {
+      throw new Error("Fetched file is not a PDF.");
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Resume.pdf";
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error("Error downloading resume:", error);
+    setError("Failed to download resume. Please try again later.");
+  }
+};
 
   useEffect(() => {
     const controller = new AbortController();
