@@ -43,7 +43,7 @@ export const USER_SKILLS_DATA = `${HOST}/api/user/userskills-data`;
 export const USER_EDUCATION_DATA = `${HOST}/api/user/usereducation-data`;
 export const USER_PROJECTS_DATA = `${HOST}/api/user/projects`;
 export const USER_PROJECTS_DATA_BY_ID = `${HOST}/api/user/projects`;
-export const FETCH_RESUME = `${HOST}/api/user/resume`;
+export const FETCH_RESUME = "/api/user/resume";
 
 export const DASHBOARD_STATS = `${HOST}/api/views/stats`;
 export const PAGE_VIEWS = `${HOST}/api/views/page-views`;
